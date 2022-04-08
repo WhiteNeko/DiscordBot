@@ -7,21 +7,16 @@ using Discord;
 using Discord.Commands;
 using Discord.WebSocket;
 
-namespace DiscordBot
+namespace DiscordBot.Services
 {
     internal class Loggers
     {
-        public Loggers()
-        {
-        }
-
         public Loggers (DiscordSocketClient client, CommandService command)
 		{
 			client.Log += LogAsync;
 			command.Log += LogAsync;
-
-
 		}
+
 		private Task LogAsync(LogMessage message)
 		{
 			if (message.Exception is CommandException cmdException)

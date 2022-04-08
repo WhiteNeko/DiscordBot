@@ -1,53 +1,76 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Linq;
+using System.Net.Http;
 using System.Text;
 using System.Threading.Tasks;
 using Discord;
 using Discord.WebSocket;
 using DiscordBot;
+using Microsoft.Extensions.DependencyInjection;
+using DiscordBot.Services;
+using Discord.Commands;
 
 namespace DiscordBot
 {
     internal class Program
     {
-        ; 
-
-        public static Task Main(string[] args) => new Program().MainAsync();
-        Loggers loggers = new Loggers();
+        public static Task Main() => new Program().MainAsync();
 
         public async Task MainAsync()
         {
-            
-            _client = new DiscordSocketClient();
+            // More info about "using" statement
+            // https://www.c-sharpcorner.com/article/the-using-statement-in-C-Sharp/
+            using (var services = ConfigureServices())
+            {
+                var client = services.GetRequiredService<DiscordSocketClient>();
+                var logger = services.GetRequiredService<Loggers>();
 
-            _client.Log += Log;
+                await client.LoginAsync(TokenType.Bot, "NDUyNTQxMzIyNjY3MjI5MTk0.WxLj8w.fmNKUU-NhUDJdGpUqkE1dmZb3AQ");
+                await client.StartAsync();
 
-            //  You can assign your bot token to a string, and pass that in to connect.
-            //  This is, however, insecure, particularly if you plan to have your code hosted in a public repository.
-            var token = "OTYwMTYzMDc0NzI2MzIyMjU2.Ykmbiw.5IXvBt6OhbfHHqP17ilEKgq302U";
-
-            // Some alternative options would be to keep your token in an Environment Variable or a standalone file.
-            // var token = Environment.GetEnvironmentVariable("NameOfYourEnvironmentVariable");
-            // var token = File.ReadAllText("token.txt");
-            // var token = JsonConvert.DeserializeObject<AConfigurationClass>(File.ReadAllText("config.json")).Token;
-
-            await _client.LoginAsync(TokenType.Bot, token);
-            await _client.StartAsync();
-
-            // Block this task until the program is closed.
-            await Task.Delay(-1);
-            
+                await Task.Delay(-1);
+            }
 
         }
 
-        private Task Log(LogMessage msg)
+        /* 
+         * Here we make and configure classes that are gonna be used throught
+         * the bot program and modules with commands or other services.
+         * 
+         * Singleton is a creational design pattern that lets you ensure that a class
+         * has only one instance, while providing a global access point to this instance.
+         * More info on how that works here: https://refactoring.guru/design-patterns/singleton
+         * 
+         * Firstly we create a new Singleton instance of DiscordSocketClient which allows us to use
+         * DiscordSocketConfig class to put in a constructor to define what we want our bot to have. 
+         * Possible configurations: https://discordnet.dev/api/Discord.WebSocket.DiscordSocketConfig.html
+         * 
+         * Secondly we make a new CommandService which is used to implement CommandHandlerService to 
+         * execute commands from command modules.
+         * 
+         * Thirdly we add our newly made Loggers service that works the same as those above but we
+         * don't put anything to the class contructor, that's because it automatically puts created 
+         * and existing instances of DiscordSocketClient and CommandService to Loggers cnotructor 
+         * so we can use them to get Logs messages and show them to the console.
+         * 
+        */
+
+        private ServiceProvider ConfigureServices()
         {
-            Console.WriteLine(msg.ToString());
-            return Task.CompletedTask;
+            return new ServiceCollection()
+                .AddSingleton(new DiscordSocketClient(new DiscordSocketConfig
+                {
+                    AlwaysDownloadUsers = true,
+                    GatewayIntents = GatewayIntents.All,
+                    LogLevel = LogSeverity.Debug
+                }))
+                .AddSingleton(new CommandService(new CommandServiceConfig
+                {
+                    LogLevel = LogSeverity.Debug
+                }))
+                .AddSingleton<Loggers>()
+                .BuildServiceProvider();
         }
-        private DiscordSocketClient _client;
-
-  
     }
 }
